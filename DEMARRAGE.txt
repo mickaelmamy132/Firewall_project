@@ -1,0 +1,107 @@
+# 🚀 Démarrage Rapide - Firewall Dynamique
+
+## ⚡ 3 Commandes pour Démarrer
+
+### Étape 1: Configuration (une seule fois)
+```bash
+cd /home/mamy/Desktop/Firewall_project
+bash setup.sh
+```
+
+### Étape 2: Éditer la configuration (optionnel)
+```bash
+nano .env
+```
+
+### Étape 3: Démarrer le firewall
+```bash
+bash start_firewall.sh
+```
+
+---
+
+## ✅ C'est Tout!
+
+Le firewall est maintenant actif avec:
+- ✅ **API FastAPI** sur `http://127.0.0.1:8000`
+- ✅ **Auto-learner** qui surveille `/var/log/auth.log`
+- ✅ **Documentation interactive** sur `http://127.0.0.1:8000/docs`
+
+---
+
+## 📊 Commandes Utiles
+
+### Voir les logs en direct:
+```bash
+tail -f /home/mamy/Desktop/Firewall_project/api/logs/api.log
+tail -f /home/mamy/Desktop/Firewall_project/api/logs/learner.log
+```
+
+### Tester l'API:
+```bash
+# Vérifier que ça marche
+curl http://127.0.0.1:8000/health
+
+# Voir les IPs bloquées
+curl -H "Authorization: Bearer change_me" http://127.0.0.1:8000/list
+```
+
+### Arrêter le firewall:
+```bash
+bash stop_firewall.sh
+```
+
+### Voir les blocs iptables:
+```bash
+sudo iptables -t filter -L DYN_BLOCK -n
+```
+
+---
+
+## 🔑 Point Important: Sudo
+
+Le firewall a besoin de droits sudo. Une seule fois:
+
+```bash
+sudo visudo
+```
+
+Ajouter à la fin:
+```
+your_username ALL=(ALL) NOPASSWD: /usr/sbin/iptables
+```
+
+**Remplacez `your_username` par votre nom (e.g., `mamy`)**
+
+---
+
+## 📚 Documentation Complète
+
+Consultez: `GUIDE_DEMARRAGE.md` pour plus de détails
+
+---
+
+## ⚠️ Avant de Démarrer
+
+1. ✅ Python 3 installé?
+2. ✅ iptables disponible?
+3. ✅ Droits sudo configurés?
+4. ✅ Fichier `/var/log/auth.log` accessible?
+
+---
+
+## 🎯 Prochaines Étapes
+
+1. Consultez la documentation API: `http://127.0.0.1:8000/docs`
+2. Testez en bloquant une IP: 
+   ```bash
+   curl -X POST http://127.0.0.1:8000/block \
+     -H "Authorization: Bearer change_me" \
+     -H "Content-Type: application/json" \
+     -d '{"ip":"192.168.1.100","ttl_seconds":3600,"reason":"test"}'
+   ```
+3. Consultez les logs pour voir les actions
+
+---
+
+**Vous êtes prêt! 🎉**

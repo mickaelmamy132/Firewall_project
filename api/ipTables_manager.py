@@ -7,7 +7,7 @@ from typing import Optional
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("iptables_manager")
-
+ 
 CHAIN = "DYN_BLOCK"
 TABLE = "filter"
 

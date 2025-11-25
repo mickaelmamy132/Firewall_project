@@ -1,0 +1,9 @@
+🚀 Démarrage du Firewall Dynamique...
+✅ Configuration:
+   API URL: http://127.0.0.1:8000/block
+   Log File: /var/log/auth.log
+   DB Path: /var/lib/dynfw/dynfw.db
+   Threshold: 5 tentatives
+   Window: 300 secondes
+
+❌ Erreur: Fichier de log non trouvé: /var/log/auth.log
