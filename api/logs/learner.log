@@ -1,5 +1,5 @@
-2025-11-25 10:06:42,703 - auto_learner - INFO - Démarrage de l'auto-learner
-2025-11-25 10:06:42,703 - auto_learner - INFO - Fichier de log: /var/log/auth.log
-2025-11-25 10:06:42,703 - auto_learner - INFO - Seuil: 5 tentatives en 300s
-2025-11-25 10:06:42,703 - auto_learner - INFO - API: http://127.0.0.1:8000/block
-2025-11-25 10:06:42,703 - auto_learner - INFO - Suivi de /var/log/auth.log commencé
+2025-11-25 10:17:38,480 - auto_learner - INFO - Démarrage de l'auto-learner
+2025-11-25 10:17:38,480 - auto_learner - INFO - Fichier de log: /var/log/auth.log
+2025-11-25 10:17:38,480 - auto_learner - INFO - Seuil: 5 tentatives en 300s
+2025-11-25 10:17:38,481 - auto_learner - INFO - API: http://127.0.0.1:8000/block
+2025-11-25 10:17:38,481 - auto_learner - INFO - Suivi de /var/log/auth.log commencé
