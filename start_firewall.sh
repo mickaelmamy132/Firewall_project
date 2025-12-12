@@ -41,9 +41,25 @@ echo "   Threshold: $DYNFW_THRESHOLD tentatives"
 echo "   Window: $DYNFW_WINDOW secondes"
 echo ""
 
+# Auto-détection du fichier de log si non trouvé
+if [ ! -f "$DYNFW_LOGFILE" ]; then
+    echo "⚠️  Fichier de log '$DYNFW_LOGFILE' non trouvé. Recherche d'alternatives..."
+    if [ -f "/var/log/auth.log" ]; then
+        export DYNFW_LOGFILE="/var/log/auth.log"
+        echo "    ✅ Fichier de log trouvé et utilisé: $DYNFW_LOGFILE"
+    elif [ -f "/var/log/secure" ]; then
+        export DYNFW_LOGFILE="/var/log/secure"
+        echo "    ✅ Fichier de log trouvé et utilisé: $DYNFW_LOGFILE"
+    fi
+fi
+
 # Vérifier que le fichier log existe
 if [ ! -f "$DYNFW_LOGFILE" ]; then
-    echo "❌ Erreur: Fichier de log non trouvé: $DYNFW_LOGFILE"
+    echo "❌ Erreur: Aucun fichier de log d'authentification trouvé."
+    echo ""
+    echo "    ℹ️  Veuillez vérifier l'emplacement des logs d'authentification sur votre système."
+    echo "    Puis, mettez à jour la variable DYNFW_LOGFILE dans le fichier .env"
+    echo ""
     exit 1
 fi
 
@@ -52,7 +68,7 @@ echo ""
 
 # Lancer l'API en arrière-plan
 echo "[1] Lancement de l'API FastAPI..."
-nohup python3 firewall_api_improved.py > logs/api.log 2>&1 &
+nohup ./venv/bin/python api/firewall_api_improved.py > api/logs/api.log 2>&1 &
 API_PID=$!
 echo "    PID API: $API_PID"
 sleep 2
@@ -80,7 +96,7 @@ done
 
 echo ""
 echo "[2] Lancement de l'auto-learner..."
-nohup python3 log_analyzer_improved.py > logs/learner.log 2>&1 &
+nohup ./venv/bin/python api/log_analyzer_improved.py > api/logs/learner.log 2>&1 &
 LEARNER_PID=$!
 echo "    PID Auto-learner: $LEARNER_PID"
 sleep 1

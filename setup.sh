@@ -20,17 +20,18 @@ echo "    ✅ Répertoires créés"
 # 2. Installer les dépendances Python
 echo ""
 echo "[2] Installation des dépendances Python..."
-pip3 install --user \
-    fastapi \
-    uvicorn \
-    requests \
-    pydantic \
-    2>/dev/null || sudo pip3 install \
+echo "    Suppression de l'ancien environnement virtuel pour une réinstallation propre..."
+rm -rf venv
+echo "    Création de l'environnement virtuel..."
+python3 -m venv venv
+echo "    Installation des dépendances..."
+./venv/bin/pip install --upgrade pip
+./venv/bin/pip install \
     fastapi \
     uvicorn \
     requests \
     pydantic
-echo "    ✅ Dépendances installées"
+echo "    ✅ Dépendances installées dans l'environnement virtuel"
 
 # 3. Rendre les scripts exécutables
 echo ""
@@ -41,12 +42,17 @@ chmod +x api/log_analyzer_improved.py
 chmod +x api/firewall_api_improved.py
 echo "    ✅ Permissions configurées"
 
-# 4. Vérifier iptables
+# 4. Vérifier et installer iptables
 echo ""
 echo "[4] Vérification d'iptables..."
 if ! command -v iptables &> /dev/null; then
-    echo "    ❌ iptables non installé"
-    exit 1
+    echo "    ⚠️ iptables non trouvé, tentative d'installation..."
+    sudo apt-get update
+    sudo apt-get install -y iptables
+    if ! command -v iptables &> /dev/null; then
+        echo "    ❌ L'installation d'iptables a échoué."
+        exit 1
+    fi
 fi
 echo "    ✅ iptables disponible"
 

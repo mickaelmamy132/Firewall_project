@@ -7,21 +7,13 @@
         [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
         
   @app.on_event("startup")
-INFO:     Started server process [18947]
+INFO:     Started server process [48966]
 INFO:     Waiting for application startup.
 INFO:dynfw_api:Base de données initialisée
 Chain DYN_BLOCK (1 references)
 target     prot opt source               destination         
 INFO:dynfw_api:Démarrage de l'API DynFW réussi
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:33766 - "GET /health HTTP/1.1" 200 OK
-WARNING:dynfw_api:Tentative d'accès non authentifiée
-INFO:     127.0.0.1:33776 - "GET /list HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:33778 - "GET /favicon.ico HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:34370 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:34378 - "GET /favicon.ico HTTP/1.1" 404 Not Found
-INFO:     Shutting down
+ERROR:    [Errno 98] error while attempting to bind on address ('0.0.0.0', 8000): address already in use
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
-INFO:     Finished server process [18947]
