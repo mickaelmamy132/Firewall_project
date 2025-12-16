@@ -1,86 +1,99 @@
-# iptables_manager.py
+#!/usr/bin/env python3
+# iptables_manager.py - Gestion des règles iptables pour le firewall dynamique
+
 import subprocess
 import ipaddress
 import logging
 import shlex
-from typing import Optional
+from typing import Optional, List
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("iptables_manager")
- 
+
 CHAIN = "DYN_BLOCK"
 TABLE = "filter"
+IPTABLES_CMD = "/usr/sbin/iptables"  # changer si iptables est ailleurs
 
-def run_cmd(cmd: list[str]):
+class IptablesError(Exception):
+    pass
+
+def run_cmd(cmd: List[str]):
+    """Exécuter la commande iptables avec gestion d'erreur."""
     logger.debug("Running: %s", " ".join(cmd))
-    subprocess.run(cmd, check=True)
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as e:
+        logger.error("Command failed: %s", e.stderr or e)
+        raise IptablesError(f"Failed to run: {' '.join(cmd)}")
 
 def ensure_chain():
-    # create chain if not exists and insert into INPUT if needed
+    """Créer la chaîne custom si elle n'existe pas et s'assurer qu'INPUT pointe vers elle."""
     try:
-        run_cmd(["sudo", "iptables", "-t", TABLE, "-n", "-L", CHAIN])
-    except subprocess.CalledProcessError:
-        logger.info("Creating chain %s", CHAIN)
-        run_cmd(["sudo", "iptables", "-t", TABLE, "-N", CHAIN])
-    # ensure there's a jump from INPUT to CHAIN at top
-    out = subprocess.run(["sudo", "iptables", "-t", TABLE, "-C", "INPUT", "-j", CHAIN],
-                         check=False)
+        run_cmd(["sudo", IPTABLES_CMD, "-t", TABLE, "-n", "-L", CHAIN])
+        logger.debug(f"Chain {CHAIN} exists")
+    except IptablesError:
+        logger.info(f"Creating chain {CHAIN}")
+        run_cmd(["sudo", IPTABLES_CMD, "-t", TABLE, "-N", CHAIN])
+
+    # s'assurer que INPUT pointe vers la chaîne
+    out = subprocess.run(["sudo", IPTABLES_CMD, "-t", TABLE, "-C", "INPUT", "-j", CHAIN],
+                         capture_output=True, text=True)
     if out.returncode != 0:
-        logger.info("Inserting jump from INPUT to %s", CHAIN)
-        run_cmd(["sudo", "iptables", "-t", TABLE, "-I", "INPUT", "1", "-j", CHAIN])
+        logger.info(f"Inserting jump from INPUT to {CHAIN}")
+        run_cmd(["sudo", IPTABLES_CMD, "-t", TABLE, "-I", "INPUT", "1", "-j", CHAIN])
 
 def block_ip(ip: str, port: Optional[int] = None, comment: Optional[str] = None):
+    """Bloquer une IP avec port optionnel et commentaire."""
     ipaddress.ip_address(ip)
     ensure_chain()
-    cmd = ["sudo", "iptables", "-t", TABLE, "-A", CHAIN, "-s", ip]
-
+    cmd = ["sudo", IPTABLES_CMD, "-t", TABLE, "-A", CHAIN, "-s", ip]
     if port:
         cmd += ["-p", "tcp", "--dport", str(port)]
-
     cmd += ["-j", "DROP"]
-
     if comment:
-        cmd += ["-m", "comment", "--comment", comment]
-
+        cmd += ["-m", "comment", "--comment", comment[:255]]
     run_cmd(cmd)
-    logger.info("Blocked %s", ip)
+    logger.info(f"Blocked {ip}{' on port '+str(port) if port else ''}")
 
-
-def unblock_ip(ip: str):
+def unblock_ip(ip: str, port: Optional[int] = None):
+    """Débloquer une IP. Si port précisé, ne supprime que cette règle."""
     ipaddress.ip_address(ip)
-    # remove all matching rules for that source in CHAIN
-    # iptables doesn't accept delete by src alone with -D unless exact rule exists,
-    # so we list and remove any rule that contains the ip.
-    out = subprocess.run(["sudo", "iptables", "-t", TABLE, "-S", CHAIN],
-                         capture_output=True, text=True, check=True)
-    lines = out.stdout.splitlines()
+    result = subprocess.run(["sudo", IPTABLES_CMD, "-t", TABLE, "-S", CHAIN],
+                            capture_output=True, text=True, check=True)
+    lines = result.stdout.splitlines()
+    deleted_count = 0
     for line in lines:
         if f"-s {ip}" in line:
-            # transform "-A CHAIN ..." into arguments for -D
+            if port and f"--dport {port}" not in line:
+                continue  # ne supprimer que si port correspond
             parts = shlex.split(line)
-            # replace leading -A with -D
+            if parts[0] != "-A":
+                continue
             parts[0] = "-D"
-            # run iptables with these args
-            cmd = ["sudo", "iptables", "-t", TABLE] + parts
+            cmd = ["sudo", IPTABLES_CMD, "-t", TABLE] + parts
             run_cmd(cmd)
-            logger.info("Unblocked rule: %s", " ".join(cmd))
+            deleted_count += 1
+            logger.info(f"Unblocked rule: {' '.join(cmd)}")
+    if deleted_count == 0:
+        logger.warning(f"No rule found for {ip}{' on port '+str(port) if port else ''}")
 
-def list_blocked() -> list[str]:
-    out = subprocess.run(["sudo", "iptables", "-t", TABLE, "-S", CHAIN],
-                         capture_output=True, text=True, check=True)
+def list_blocked() -> List[str]:
+    """Lister toutes les IPs bloquées (tous ports confondus)."""
+    result = subprocess.run(["sudo", IPTABLES_CMD, "-t", TABLE, "-S", CHAIN],
+                            capture_output=True, text=True, check=True)
     ips = []
-    for line in out.stdout.splitlines():
+    for line in result.stdout.splitlines():
         if "-s" in line:
-            # crude parse
             parts = line.split()
             try:
-                i = parts.index("-s")
-                ips.append(parts[i+1])
+                idx = parts.index("-s")
+                ip = parts[idx + 1]
+                ipaddress.ip_address(ip)
+                ips.append(ip)
             except Exception:
                 continue
     return ips
 
 if __name__ == "__main__":
-    # quick demo
     ensure_chain()
-    print("Blocked list:", list_blocked())
+    print(f"IPs bloquées ({len(list_blocked())}): {list_blocked()}")

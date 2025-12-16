@@ -2,12 +2,12 @@
 # firewall_api.py - API FastAPI pour la gestion du firewall dynamique
 
 from fastapi import FastAPI, HTTPException, Depends, Request
-from fastapi.middleware.cors import CORSMiddleware   # ✅ IMPORT MANQUANT
-from pydantic import BaseModel, IPvAnyAddress, Field
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, IPvAnyAddress
 import sqlite3
 import time
 import subprocess
-from typing import Optional, List
+from typing import Optional
 import ipTables_manager as im
 import logging
 import os
@@ -15,7 +15,7 @@ from contextlib import contextmanager
 import re
 
 # ---------------------------------------------------------
-# ✅ CONFIG LOGGING
+# CONFIG LOGGING
 # ---------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
@@ -27,31 +27,26 @@ DB_PATH = os.environ.get("DYNFW_DB", "/var/lib/dynfw/dynfw.db")
 API_TOKEN = os.environ.get("DYNFW_API_TOKEN", "MyToken")
 
 # ---------------------------------------------------------
-# ✅ INITIALISATION FASTAPI
+# FASTAPI
 # ---------------------------------------------------------
 app = FastAPI(
     title="DynFW API",
-    description="API pour la gestion dynamique du firewall de jose celestin",
+    description="API pour la gestion dynamique du firewall",
     version="1.0.0"
 )
 
-# ---------------------------------------------------------
-# ✅ AJOUT DU CORS (IMPORTANT POUR REACT)
-# ---------------------------------------------------------
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ou ["http://localhost:3000"]
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ---------------------------------------------------------
-# ✅ BASE DE DONNÉES
+# BASE DE DONNÉES
 # ---------------------------------------------------------
-class DatabaseError(Exception):
-    pass
-
 @contextmanager
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
@@ -68,6 +63,7 @@ def init_db():
             c.execute("""CREATE TABLE IF NOT EXISTS blocks (
                             id INTEGER PRIMARY KEY,
                             ip TEXT UNIQUE,
+                            port INTEGER,
                             reason TEXT,
                             ts INTEGER,
                             expires_at INTEGER
@@ -78,22 +74,22 @@ def init_db():
         logger.info("Base de données initialisée")
     except Exception as e:
         logger.error(f"Erreur DB init: {e}")
-        raise DatabaseError(f"Erreur DB: {e}")
+        raise
 
-def add_db_block(ip: str, reason: Optional[str], ttl_seconds: Optional[int]):
+def add_db_block(ip: str, reason: Optional[str], ttl_seconds: Optional[int], port: Optional[int] = None):
     try:
         with get_db_connection() as conn:
             c = conn.cursor()
             ts = int(time.time())
             expires_at = ts + ttl_seconds if ttl_seconds else None
             c.execute(
-                "INSERT OR REPLACE INTO blocks(ip, reason, ts, expires_at) VALUES (?,?,?,?)",
-                (ip, reason, ts, expires_at)
+                "INSERT OR REPLACE INTO blocks(ip, port, reason, ts, expires_at) VALUES (?,?,?,?,?)",
+                (ip, port, reason, ts, expires_at)
             )
             conn.commit()
     except Exception as e:
         logger.error(f"Erreur DB add: {e}")
-        raise DatabaseError(f"Erreur DB: {e}")
+        raise
 
 def remove_db_block(ip: str):
     try:
@@ -103,21 +99,21 @@ def remove_db_block(ip: str):
             conn.commit()
     except Exception as e:
         logger.error(f"Erreur DB remove: {e}")
-        raise DatabaseError(f"Erreur DB: {e}")
+        raise
 
 def get_blocks():
     try:
         with get_db_connection() as conn:
             c = conn.cursor()
-            c.execute("SELECT ip, reason, ts, expires_at FROM blocks ORDER BY ts DESC")
+            c.execute("SELECT ip, port, reason, ts, expires_at FROM blocks ORDER BY ts DESC")
             rows = c.fetchall()
-        return [{"ip": r[0], "reason": r[1], "ts": r[2], "expires_at": r[3]} for r in rows]
+        return [{"ip": r[0], "port": r[1], "reason": r[2], "ts": r[3], "expires_at": r[4]} for r in rows]
     except Exception as e:
         logger.error(f"Erreur DB get: {e}")
         return []
 
 # ---------------------------------------------------------
-# ✅ AUTHENTIFICATION TOKEN
+# AUTHENTIFICATION TOKEN
 # ---------------------------------------------------------
 def check_token(request: Request):
     token = request.headers.get("Authorization", "")
@@ -125,18 +121,19 @@ def check_token(request: Request):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 # ---------------------------------------------------------
-# ✅ SCHEMAS
+# SCHEMAS
 # ---------------------------------------------------------
 class BlockReq(BaseModel):
     ip: IPvAnyAddress
     ttl_seconds: Optional[int] = None
     reason: Optional[str] = None
+    port: Optional[int] = None
 
 class UnblockReq(BaseModel):
     ip: IPvAnyAddress
 
 # ---------------------------------------------------------
-# ✅ ROUTES
+# ROUTES
 # ---------------------------------------------------------
 @app.on_event("startup")
 def startup():
@@ -144,18 +141,12 @@ def startup():
     im.ensure_chain()
     logger.info("API DynFW démarrée")
 
-class BlockReq(BaseModel):
-    ip: IPvAnyAddress
-    ttl_seconds: Optional[int] = None
-    reason: Optional[str] = None
-    port: Optional[int] = None  # ✅ nouveau champ
-
 @app.post("/block", dependencies=[Depends(check_token)])
 def block(r: BlockReq):
     ip = str(r.ip)
     im.block_ip(ip, port=r.port, comment=r.reason or "dynfw")
-    add_db_block(ip, r.reason, r.ttl_seconds)
-    return {"status": "blocked", "ip": ip}
+    add_db_block(ip, r.reason, r.ttl_seconds, port=r.port)
+    return {"status": "blocked", "ip": ip, "port": r.port, "reason": r.reason}
 
 @app.post("/unblock", dependencies=[Depends(check_token)])
 def unblock(r: UnblockReq):
@@ -177,6 +168,7 @@ def health_check():
 def list_clients():
     """
     Scanner le réseau local avec arp-scan et retourner IP, MAC et Vendor.
+    Évite les doublons.
     """
     try:
         result = subprocess.run(
@@ -187,31 +179,28 @@ def list_clients():
 
         lines = result.stdout.split("\n")
         clients = []
+        seen_ips = set()
 
         for line in lines:
-            # Format : IP \t MAC \t Vendor
             parts = line.split("\t")
             if len(parts) >= 3:
                 ip = parts[0].strip()
                 mac = parts[1].strip()
                 vendor = parts[2].strip()
-
-                # Filtrer les lignes valides (IP au bon format)
-                if re.match(r"^\d+\.\d+\.\d+\.\d+$", ip):
+                if re.match(r"^\d+\.\d+\.\d+\.\d+$", ip) and ip not in seen_ips:
                     clients.append({
                         "ipAddress": ip,
                         "macAddress": mac,
                         "vendor": vendor
                     })
-
+                    seen_ips.add(ip)
         return clients
-
     except Exception as e:
         logger.error(f"Erreur arp-scan: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors du scan réseau")
 
 # ---------------------------------------------------------
-# ✅ LANCEMENT UVICORN
+# LANCEMENT UVICORN
 # ---------------------------------------------------------
 if __name__ == "__main__":
     import uvicorn
