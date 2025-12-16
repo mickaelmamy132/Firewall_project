@@ -29,14 +29,22 @@ def ensure_chain():
         logger.info("Inserting jump from INPUT to %s", CHAIN)
         run_cmd(["sudo", "iptables", "-t", TABLE, "-I", "INPUT", "1", "-j", CHAIN])
 
-def block_ip(ip: str, comment: Optional[str] = None):
-    ipaddress.ip_address(ip)  # raises if invalid
+def block_ip(ip: str, port: Optional[int] = None, comment: Optional[str] = None):
+    ipaddress.ip_address(ip)
     ensure_chain()
-    cmd = ["sudo", "iptables", "-t", TABLE, "-A", CHAIN, "-s", ip, "-j", "DROP"]
+    cmd = ["sudo", "iptables", "-t", TABLE, "-A", CHAIN, "-s", ip]
+
+    if port:
+        cmd += ["-p", "tcp", "--dport", str(port)]
+
+    cmd += ["-j", "DROP"]
+
     if comment:
         cmd += ["-m", "comment", "--comment", comment]
+
     run_cmd(cmd)
     logger.info("Blocked %s", ip)
+
 
 def unblock_ip(ip: str):
     ipaddress.ip_address(ip)

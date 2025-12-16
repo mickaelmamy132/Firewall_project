@@ -94,7 +94,7 @@ if [ ! -f .env ]; then
     cat > .env << 'EOF'
 # Configuration du Firewall Dynamique
 DYNFW_API_URL=http://127.0.0.1:8000/block
-DYNFW_API_TOKEN=change_me_in_production
+DYNFW_API_TOKEN=MyToken_in_production
 DYNFW_LOGFILE=/var/log/auth.log
 DYNFW_DB=/var/lib/dynfw/dynfw.db
 DYNFW_THRESHOLD=5

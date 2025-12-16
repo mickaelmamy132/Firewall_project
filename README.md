@@ -63,13 +63,13 @@ ps aux | grep log_analyzer
 
 ### Voir les IPs bloquées:
 ```bash
-curl -H "Authorization: Bearer change_me" http://127.0.0.1:8000/list
+curl -H "Authorization: Bearer MyToken" http://127.0.0.1:8000/list
 ```
 
 ### Bloquer une IP manuellement:
 ```bash
 curl -X POST http://127.0.0.1:8000/block \
-  -H "Authorization: Bearer change_me" \
+  -H "Authorization: Bearer MyToken" \
   -H "Content-Type: application/json" \
   -d '{"ip":"192.168.1.100","ttl_seconds":3600,"reason":"test"}'
 ```
@@ -77,7 +77,7 @@ curl -X POST http://127.0.0.1:8000/block \
 ### Débloquer une IP:
 ```bash
 curl -X POST http://127.0.0.1:8000/unblock \
-  -H "Authorization: Bearer change_me" \
+  -H "Authorization: Bearer MyToken" \
   -H "Content-Type: application/json" \
   -d '{"ip":"192.168.1.100"}'
 ```

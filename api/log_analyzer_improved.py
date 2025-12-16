@@ -19,7 +19,7 @@ logger = logging.getLogger("auto_learner")
 
 # Configuration via variables d'environnement
 API_URL = os.environ.get("DYNFW_API_URL", "http://127.0.0.1:8000/block")
-API_TOKEN = os.environ.get("DYNFW_API_TOKEN", "change_me")
+API_TOKEN = os.environ.get("DYNFW_API_TOKEN", "MyToken")
 LOGFILE = os.environ.get("DYNFW_LOGFILE", "/var/log/auth.log")
 
 THRESHOLD = int(os.environ.get("DYNFW_THRESHOLD", "5"))  # tentatives

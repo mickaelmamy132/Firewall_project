@@ -43,7 +43,7 @@ tail -f /home/mamy/Desktop/Firewall_project/api/logs/learner.log
 curl http://127.0.0.1:8000/health
 
 # Voir les IPs bloquées
-curl -H "Authorization: Bearer change_me" http://127.0.0.1:8000/list
+curl -H "Authorization: Bearer MyToken" http://127.0.0.1:8000/list
 ```
 
 ### Arrêter le firewall:
@@ -96,7 +96,7 @@ Consultez: `GUIDE_DEMARRAGE.md` pour plus de détails
 2. Testez en bloquant une IP: 
    ```bash
    curl -X POST http://127.0.0.1:8000/block \
-     -H "Authorization: Bearer change_me" \
+     -H "Authorization: Bearer MyToken" \
      -H "Content-Type: application/json" \
      -d '{"ip":"192.168.1.100","ttl_seconds":3600,"reason":"test"}'
    ```

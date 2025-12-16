@@ -6,7 +6,7 @@ from collections import defaultdict, deque
 import os
 
 API_URL = os.environ.get("DYNFW_API_URL", "http://127.0.0.1:8000/block")
-API_TOKEN = os.environ.get("DYNFW_API_TOKEN", "change_me")
+API_TOKEN = os.environ.get("DYNFW_API_TOKEN", "MyToken")
 LOGFILE = os.environ.get("DYNFW_LOGFILE", "/var/log/auth.log")
 
 THRESHOLD = 5         # tentatives 

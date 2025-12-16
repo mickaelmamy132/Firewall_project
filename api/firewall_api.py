@@ -1,19 +1,58 @@
-# app.py
 from fastapi import FastAPI, HTTPException, Depends, Request
-from pydantic import BaseModel, IPvAnyAddress
+from fastapi.middleware.cors import CORSMiddleware   # ✅ IMPORT MANQUANT
+from pydantic import BaseModel, IPvAnyAddress, Field
 import sqlite3
 import time
 import subprocess
 from typing import Optional, List
-import ipTables_manager as im 
+import ipTables_manager as im
 import logging
 import os
+from contextlib import contextmanager
+import re
+
+
+# ---------------------------------------------------------
+# ✅ CONFIG LOGGING
+# ---------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("dynfw_api")
+
+DB_PATH = os.environ.get("DYNFW_DB", "/var/lib/dynfw/dynfw.db")
+API_TOKEN = os.environ.get("DYNFW_API_TOKEN", "MyToken")
+
+# ---------------------------------------------------------
+# ✅ INITIALISATION FASTAPI
+# ---------------------------------------------------------
+app = FastAPI(
+    title="DynFW API",
+    description="API pour la gestion dynamique du firewall de jose celestin",
+    version="1.0.0"
+)
+
+# ---------------------------------------------------------
+# ✅ AJOUT DU CORS (IMPORTANT POUR REACT)
+# ---------------------------------------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # ou ["http://localhost:3000"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ---------------------------------------------------------
+# ✅ BASE DE DONNÉES
+# ---------------------------------------------------------
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("dynfw_api")
 
 DB_PATH = os.environ.get("DYNFW_DB", "/var/lib/dynfw/dynfw.db")
-API_TOKEN = os.environ.get("DYNFW_API_TOKEN", "change_me")  # change in prod
+API_TOKEN = os.environ.get("DYNFW_API_TOKEN", "MyToken")  # change in prod
 
 # DB helpers
 def init_db():
@@ -99,6 +138,44 @@ def unblock(r: BlockReq):
 @app.get("/list", dependencies=[Depends(check_token)])
 def list_blocks():
     return get_blocks()
+
+@app.get("/clients", tags=["Network"])
+def list_clients():
+    """
+    Scanner le réseau local avec arp-scan et retourner IP, MAC et Vendor.
+    """
+    try:
+        result = subprocess.run(
+            ["sudo", "arp-scan", "--localnet"],
+            capture_output=True,
+            text=True
+        )
+
+        lines = result.stdout.split("\n")
+        clients = []
+
+        for line in lines:
+            # Format : IP \t MAC \t Vendor
+            parts = line.split("\t")
+            if len(parts) >= 3:
+                ip = parts[0].strip()
+                mac = parts[1].strip()
+                vendor = parts[2].strip()
+
+                # Filtrer les lignes valides (IP au bon format)
+                if re.match(r"^\d+\.\d+\.\d+\.\d+$", ip):
+                    clients.append({
+                        "ipAddress": ip,
+                        "macAddress": mac,
+                        "vendor": vendor
+                    })
+
+        return clients
+
+    except Exception as e:
+        logger.error(f"Erreur arp-scan: {e}")
+        raise HTTPException(status_code=500, detail="Erreur lors du scan réseau")
+
 
 @app.post("/cleanup", dependencies=[Depends(check_token)])
 def cleanup_expired():

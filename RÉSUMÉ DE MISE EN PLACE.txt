@@ -69,7 +69,7 @@
 >    $ tail -f /home/mamy/Desktop/Firewall_project/api/logs/learner.log
 > 
 > Lister les IPs bloquées:
->    $ curl -H "Authorization: Bearer change_me" \
+>    $ curl -H "Authorization: Bearer MyToken" \
 >      http://127.0.0.1:8000/list
 > 
 > Documention interactive:
@@ -93,7 +93,7 @@
 > DYNFW_THRESHOLD=5          (nombre tentatives avant blocage)
 > DYNFW_WINDOW=300           (fenêtre de temps en secondes)
 > DYNFW_BLOCK_TTL=7200       (durée du blocage en secondes)
-> DYNFW_API_TOKEN=change_me  (token d'authentification)
+> DYNFW_API_TOKEN=MyToken  (token d'authentification)
 > 
 > Modifier directement dans le script ou créer un fichier .env
 > 
@@ -247,7 +247,7 @@ Voir les logs en direct:
    $ tail -f /home/mamy/Desktop/Firewall_project/api/logs/learner.log
 
 Lister les IPs bloquées:
-   $ curl -H "Authorization: Bearer change_me" \
+   $ curl -H "Authorization: Bearer MyToken" \
      http://127.0.0.1:8000/list
 
 Documention interactive:
@@ -271,7 +271,7 @@ Les variables d'environnement sont dans: start_firewall_simple.sh
 DYNFW_THRESHOLD=5          (nombre tentatives avant blocage)
 DYNFW_WINDOW=300           (fenêtre de temps en secondes)
 DYNFW_BLOCK_TTL=7200       (durée du blocage en secondes)
-DYNFW_API_TOKEN=change_me  (token d'authentification)
+DYNFW_API_TOKEN=MyToken  (token d'authentification)
 
 Modifier directement dans le script ou créer un fichier .env
 

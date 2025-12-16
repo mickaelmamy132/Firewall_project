@@ -120,17 +120,17 @@ ps aux | grep log_analyzer
 curl http://127.0.0.1:8000/health
 
 # Lister les IPs bloquées (remplacer TOKEN)
-curl -H "Authorization: Bearer change_me" http://127.0.0.1:8000/list
+curl -H "Authorization: Bearer MyToken" http://127.0.0.1:8000/list
 
 # Bloquer une IP
 curl -X POST http://127.0.0.1:8000/block \
-  -H "Authorization: Bearer change_me" \
+  -H "Authorization: Bearer MyToken" \
   -H "Content-Type: application/json" \
   -d '{"ip":"192.168.1.100","ttl_seconds":3600,"reason":"test"}'
 
 # Débloquer une IP
 curl -X POST http://127.0.0.1:8000/unblock \
-  -H "Authorization: Bearer change_me" \
+  -H "Authorization: Bearer MyToken" \
   -H "Content-Type: application/json" \
   -d '{"ip":"192.168.1.100"}'
 ```
@@ -172,7 +172,7 @@ python3 firewall_api_improved.py
 ### Terminal 2 - Démarrer l'auto-learner:
 ```bash
 export DYNFW_API_URL="http://127.0.0.1:8000/block"
-export DYNFW_API_TOKEN="change_me"
+export DYNFW_API_TOKEN="MyToken"
 export DYNFW_LOGFILE="/var/log/auth.log"
 
 cd /home/mamy/Desktop/Firewall_project/api
@@ -263,7 +263,7 @@ sudo kill -9 <PID>
 
 ## 📝 Notes Importantes
 
-1. **Token d'authentification**: Changez `change_me` par un token sécurisé en production
+1. **Token d'authentification**: Changez `MyToken` par un token sécurisé en production
 2. **Permissions sudo**: Sans sudo configuré, le firewall ne fonctionnera pas
 3. **Fichier de log SSH**: Le path dépend de votre configuration
 4. **Sauvegardes DB**: La base de données SQLite est en `/var/lib/dynfw/dynfw.db`

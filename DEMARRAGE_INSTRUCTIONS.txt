@@ -32,7 +32,7 @@
    $ curl http://127.0.0.1:8000/health
 
 ✅ Voir les IPs bloquées:
-   $ curl -H "Authorization: Bearer change_me" \
+   $ curl -H "Authorization: Bearer MyToken" \
      http://127.0.0.1:8000/list
 
 ✅ Voir la documentation API:
@@ -91,7 +91,7 @@ Firewall_project/
 Variables d'environnement (dans start_firewall_simple.sh):
 
 DYNFW_API_URL=http://127.0.0.1:8000/block   ← URL de l'API
-DYNFW_API_TOKEN=change_me                   ← Token d'authentification
+DYNFW_API_TOKEN=MyToken                   ← Token d'authentification
 DYNFW_LOGFILE=/var/log/auth.log             ← Fichier log SSH
 DYNFW_DB=./data/dynfw.db                    ← Base de données
 DYNFW_THRESHOLD=5                           ← Nombre de tentatives avant blocage

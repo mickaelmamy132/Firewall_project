@@ -6,6 +6,7 @@ import logging
 import shlex
 from typing import Optional, List
 
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -39,6 +40,7 @@ def run_cmd(cmd: List[str]) -> None:
         raise IptablesError(f"Erreur iptables: {e.stderr or e}")
     except FileNotFoundError:
         raise IptablesError("sudo ou iptables non trouvé. Vérifier l'installation.")
+
 
 def ensure_chain() -> None:
     """Créer la chaîne custom si elle n'existe pas et la lier à INPUT."""
