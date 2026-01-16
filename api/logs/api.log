@@ -1,32 +1,28 @@
-/home/mamy/Desktop/Projet_fin_annee/Firewall_project/api/firewall_api_improved.py:138: DeprecationWarning: 
+/home/mamy/Desktop/Projet_fin_annee/Firewall_project/api/firewall_api_improved.py:147: DeprecationWarning: 
         on_event is deprecated, use lifespan event handlers instead.
 
         Read more about it in the
         [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
         
   @app.on_event("startup")
-INFO:     Started server process [86698]
+INFO:     Started server process [108809]
 INFO:     Waiting for application startup.
-2025-12-16 15:56:18,021 - dynfw_api - INFO - Base de données initialisée
-2025-12-16 15:56:21,104 - dynfw_api - INFO - API DynFW démarrée
+2025-12-17 12:06:28,023 - dynfw_api - INFO - Base de données initialisée
+2025-12-17 12:06:31,339 - iptables_manager - ERROR - Command failed: iptables: No chain/target/match by that name.
+
+2025-12-17 12:06:31,340 - iptables_manager - INFO - Creating chain DYN_BLOCK
+2025-12-17 12:06:31,363 - iptables_manager - INFO - Inserting jump from INPUT to DYN_BLOCK
+2025-12-17 12:06:31,374 - dynfw_api - INFO - API DynFW démarrée
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:56434 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56448 - "OPTIONS /list HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56454 - "OPTIONS /list HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56448 - "GET /list HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56454 - "GET /list HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56444 - "GET /clients HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56436 - "GET /clients HTTP/1.1" 200 OK
-INFO:     127.0.0.1:36280 - "OPTIONS /block HTTP/1.1" 200 OK
-2025-12-16 15:56:33,859 - iptables_manager - INFO - Blocked 192.168.1.241
-INFO:     127.0.0.1:36280 - "POST /block HTTP/1.1" 200 OK
-INFO:     127.0.0.1:36280 - "GET /list HTTP/1.1" 200 OK
-INFO:     127.0.0.1:36280 - "OPTIONS /unblock HTTP/1.1" 200 OK
-2025-12-16 15:56:38,216 - iptables_manager - INFO - Unblocked rule: sudo /usr/sbin/iptables -t filter -D DYN_BLOCK -s 192.168.1.241/32 -m comment --comment brut -j DROP
-INFO:     127.0.0.1:36280 - "POST /unblock HTTP/1.1" 200 OK
-INFO:     127.0.0.1:36280 - "GET /list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46428 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45534 - "OPTIONS /list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45534 - "OPTIONS /list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45564 - "GET /list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45534 - "GET /list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45548 - "GET /clients HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45530 - "GET /clients HTTP/1.1" 200 OK
 INFO:     Shutting down
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
-INFO:     Finished server process [86698]
+INFO:     Finished server process [108809]

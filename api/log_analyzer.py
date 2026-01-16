@@ -7,7 +7,11 @@ import os
 
 API_URL = os.environ.get("DYNFW_API_URL", "http://127.0.0.1:8000/block")
 API_TOKEN = os.environ.get("DYNFW_API_TOKEN", "MyToken")
-LOGFILE = os.environ.get("DYNFW_LOGFILE", "/var/log/auth.log")
+LOGFILE = os.environ.get(
+    "DYNFW_LOGFILE",
+    "/home/mamy/Desktop/Projet_fin_annee/Firewall_project/api/api.log"
+)
+
 
 THRESHOLD = 5         # tentatives 
 WINDOW = 300          # secondes (5 minutes)

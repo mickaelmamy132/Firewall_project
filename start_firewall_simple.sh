@@ -18,7 +18,7 @@ export DYNFW_THRESHOLD="${DYNFW_THRESHOLD:-5}"
 export DYNFW_WINDOW="${DYNFW_WINDOW:-300}"
 export DYNFW_BLOCK_TTL="${DYNFW_BLOCK_TTL:-7200}"
 
-echo "✅ Configuration:"
+echo "✅ Configuration:"        
 echo "   API URL     : $DYNFW_API_URL"
 echo "   Log File    : $DYNFW_LOGFILE"
 echo "   DB Path     : $DYNFW_DB"
