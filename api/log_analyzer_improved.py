@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# log_analyzer.py - Auto-learner pour bloquer les IPs suspectes
+# log_analyzer_improved.py - Auto-learner DynFW (SSH bruteforce)
 
 import time
 import re
@@ -7,11 +7,11 @@ import requests
 import ipaddress
 import logging
 import sys
-from collections import defaultdict, deque
 import os
+from collections import defaultdict, deque
 
 # ---------------------------------------------------------
-# CONFIG LOGGING
+# LOGGING
 # ---------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
@@ -25,28 +25,25 @@ logger = logging.getLogger("auto_learner")
 API_URL = os.environ.get("DYNFW_API_URL", "http://127.0.0.1:8000/block")
 API_TOKEN = os.environ.get("DYNFW_API_TOKEN", "MyToken")
 
-LOGFILE = os.environ.get(
-    "DYNFW_LOGFILE",
-    "/home/mamy/Desktop/Projet_fin_annee/Firewall_project/api/api.log"
-)
+# 🔴 IMPORTANT : auth.log (SSH écrit ici)
+LOGFILE = os.environ.get("DYNFW_LOGFILE", "/var/log/auth.log")
 
-THRESHOLD = int(os.environ.get("DYNFW_THRESHOLD", "5"))   # tentatives
-WINDOW = int(os.environ.get("DYNFW_WINDOW", "300"))       # 5 minutes
-BLOCK_TTL = int(os.environ.get("DYNFW_BLOCK_TTL", "7200"))  # 2 heures
-REQUEST_TIMEOUT = int(os.environ.get("DYNFW_TIMEOUT", "5"))
+THRESHOLD = int(os.environ.get("DYNFW_THRESHOLD", "5"))
+WINDOW = int(os.environ.get("DYNFW_WINDOW", "300"))
+BLOCK_TTL = int(os.environ.get("DYNFW_BLOCK_TTL", "7200"))
+REQUEST_TIMEOUT = 5
 
 # ---------------------------------------------------------
-# CACHE DES TENTATIVES
+# STOCKAGE DES TENTATIVES
 # ---------------------------------------------------------
-ip_failures = defaultdict(lambda: deque())
+attempts = defaultdict(deque)
+blocked_ips = set()
 
 # ---------------------------------------------------------
-# REGEX IP (IPv4 + IPv6)
+# REGEX SSH (ROBUSTE)
 # ---------------------------------------------------------
-ip_regex = re.compile(
-    r'(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}'
-    r'(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
-    r'|(?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}'
+SSH_FAIL_REGEX = re.compile(
+    r"(Failed password|Invalid user).* from (\d+\.\d+\.\d+\.\d+)"
 )
 
 # ---------------------------------------------------------
@@ -59,11 +56,15 @@ def is_valid_ip(ip: str) -> bool:
     except ValueError:
         return False
 
+blocked_ips = set()  # pour éviter de bloquer plusieurs fois la même IP
 
-def send_block(ip: str, reason: str) -> bool:
-    """Appel API pour bloquer une IP"""
-    if not is_valid_ip(ip):
-        logger.warning(f"IP invalide ignorée: {ip}")
+def send_block(ip: str, block_port: int | None = None) -> bool:
+    """
+    Bloque une IP via l'API.
+    - block_port : int -> bloque uniquement ce port
+                  None -> bloque tous les ports
+    """
+    if ip in blocked_ips:
         return False
 
     headers = {
@@ -74,7 +75,8 @@ def send_block(ip: str, reason: str) -> bool:
     payload = {
         "ip": ip,
         "ttl_seconds": BLOCK_TTL,
-        "reason": reason
+        "reason": "ssh_bruteforce",
+        "port": block_port  # None ou numéro de port
     }
 
     try:
@@ -85,25 +87,24 @@ def send_block(ip: str, reason: str) -> bool:
             timeout=REQUEST_TIMEOUT
         )
 
-        if r.status_code in (200, 201):
-            logger.warning(f"🔥 IP BLOQUÉE: {ip} ({reason})")
+        if r.status_code == 200:
+            if block_port:
+                logger.warning(f"🔥 IP BLOQUÉE: {ip} sur le port {block_port}")
+            else:
+                logger.warning(f"🔥 IP BLOQUÉE: {ip} sur tous les ports")
+            blocked_ips.add(ip)
             return True
         else:
             logger.error(f"API error {r.status_code}: {r.text}")
-            return False
 
-    except requests.exceptions.Timeout:
-        logger.error(f"Timeout API pour {ip}")
-    except requests.exceptions.ConnectionError:
-        logger.error(f"Connexion API impossible: {API_URL}")
     except Exception as e:
-        logger.error(f"Erreur blocage {ip}: {e}")
+        logger.error(f"Erreur API: {e}")
 
     return False
 
 
+
 def tail_file(path: str):
-    """Lecture continue du fichier de log"""
     try:
         with open(path, "r", encoding="utf-8", errors="ignore") as f:
             f.seek(0, 2)
@@ -114,12 +115,8 @@ def tail_file(path: str):
                     time.sleep(0.2)
                     continue
                 yield line.strip()
-
-    except FileNotFoundError:
-        logger.error(f"Fichier introuvable: {path}")
-        sys.exit(1)
     except Exception as e:
-        logger.error(f"Erreur lecture fichier: {e}")
+        logger.error(f"Erreur lecture log: {e}")
         sys.exit(1)
 
 
@@ -127,47 +124,31 @@ def tail_file(path: str):
 # ANALYSE DES LIGNES
 # ---------------------------------------------------------
 def handle_line(line: str):
-    if not line:
+    if "sshd" not in line.lower():
         return
 
-    # 🔐 Erreurs d'authentification API / SSH / JWT
-    patterns = [
-        "Unauthorized",
-        "Invalid token",
-        "authentication failed",
-        "Failed password",
-        "Invalid user"
-    ]
-
-    if not any(p.lower() in line.lower() for p in patterns):
+    match = SSH_FAIL_REGEX.search(line)
+    if not match:
         return
 
-    matches = ip_regex.findall(line)
-    if not matches:
-        return
-
-    ip = matches[0]
+    ip = match.group(2)
     if not is_valid_ip(ip):
         return
 
     now = time.time()
-    dq = ip_failures[ip]
+    dq = attempts[ip]
     dq.append(now)
 
-    # Nettoyage fenêtre temporelle
+    # Nettoyage fenêtre
     while dq and dq[0] < now - WINDOW:
         dq.popleft()
 
-    if len(dq) >= THRESHOLD:
-        logger.warning(
-            f"🚨 Bruteforce détecté: {ip} "
-            f"({len(dq)} tentatives en {WINDOW}s)"
-        )
+    logger.info(f"🔐 {ip} → {len(dq)}/{THRESHOLD} tentatives")
 
-        if send_block(ip, reason="auth_bruteforce"):
+    if len(dq) >= THRESHOLD:
+        logger.warning(f"🚨 Bruteforce détecté depuis {ip}")
+        if send_block(ip):
             dq.clear()
-    else:
-        logger.info(f"{ip} → {len(dq)}/{THRESHOLD} tentatives")
 
 
 # ---------------------------------------------------------
@@ -177,20 +158,12 @@ def main():
     logger.info("🚀 Auto-learner DynFW démarré")
     logger.info(f"LOGFILE   : {LOGFILE}")
     logger.info(f"API       : {API_URL}")
-    logger.info(f"SEUIL     : {THRESHOLD} tentatives")
+    logger.info(f"SEUIL     : {THRESHOLD}")
     logger.info(f"FENÊTRE   : {WINDOW}s")
     logger.info(f"TTL BLOCK : {BLOCK_TTL}s")
 
-    try:
-        for line in tail_file(LOGFILE):
-            handle_line(line)
-
-    except KeyboardInterrupt:
-        logger.info("🛑 Arrêt manuel")
-        sys.exit(0)
-    except Exception as e:
-        logger.error(f"Erreur critique: {e}", exc_info=True)
-        sys.exit(1)
+    for line in tail_file(LOGFILE):
+        handle_line(line)
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ LOGFILE = os.environ.get(
 )
 
 
-THRESHOLD = 5         # tentatives 
+THRESHOLD = 3         # tentatives 
 WINDOW = 300          # secondes (5 minutes)
 BLOCK_TTL = 3600*2    # 2 heures
 
